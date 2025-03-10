@@ -2,9 +2,6 @@ FROM public.ecr.aws/lts/ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Set up a new user named "user" with user ID 1000
-RUN useradd -m -u 1000 user
-
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y \
@@ -22,15 +19,22 @@ RUN apt-get update && \
     apt install ffmpeg -y && \
     rm -rf /var/lib/apt/lists/*
 
+# Create o11 directory and set permissions
+RUN mkdir -p /home/o11 && \
+    chown 1000:1000 /home/o11
+
 # Switch to the "user" user
-USER user
+USER 1000
 
-# Set home and path
-ENV HOME=/home/user \
-    PATH=/home/user/.local/bin:$PATH
+RUN sed -i '/home\/o11/d' /etc/fstab && \
+    echo "tmpfs /home/o11/hls tmpfs defaults,noatime,nosuid,nodev,noexec,mode=1777,size=70% 0 0" >> /etc/fstab && \
+    echo "tmpfs /home/o11/dl tmpfs defaults,noatime,nosuid,nodev,noexec,mode=1777,size=70% 0 0" >> /etc/fstab && \
+    mkdir -p /home/o11/hls && mkdir -p /home/o11/dl && \
+    echo "Verifying tmpfs configuration:" && \
+    grep "tmpfs /home/o11/hls" /etc/fstab || (echo "Failed to add tmpfs configuration" && exit 1)
 
-# Set working directory
-WORKDIR $HOME/o11
+# Set working directory to original path
+WORKDIR /home/o11
 
 # Install Python packages
 RUN pip install --no-cache-dir urllib3 dnspython requests requests_toolbelt --break-system-packages
