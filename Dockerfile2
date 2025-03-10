@@ -1,0 +1,63 @@
+FROM public.ecr.aws/lts/ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set up a new user named "user" with user ID 1000
+RUN useradd -m -u 1000 user
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y \
+        software-properties-common \
+        wget \
+        gnupg \
+        lsb-release \
+        curl \
+        tzdata \
+        nano \
+        python3 \
+        python3-pip && \
+    add-apt-repository ppa:ubuntuhandbook1/ffmpeg7 && \
+    apt-get update && \
+    apt install ffmpeg -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Switch to the "user" user
+USER user
+
+# Set home and path
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
+
+# Set working directory
+WORKDIR $HOME/o11
+
+# Install Python packages
+RUN pip install --no-cache-dir urllib3 dnspython requests requests_toolbelt --break-system-packages
+
+# Create necessary directories with permissions
+RUN mkdir -p \
+    hls/live \
+    hls/replay \
+    dl/tmp \
+    scripts \
+    logs \
+    rec && \
+    chmod -R 755 \
+    hls \
+    dl \
+    scripts \
+    logs \
+    rec
+
+# Copy application files with correct ownership
+COPY --chown=1000:1000 files/o11v22b1 ./
+COPY --chown=1000:1000 files/run.sh ./
+COPY --chown=1000:1000 files/o11.py scripts/
+
+# Make files executable
+RUN chmod +x run.sh o11v22b1
+
+EXPOSE 7860
+
+CMD ["./run.sh"]
