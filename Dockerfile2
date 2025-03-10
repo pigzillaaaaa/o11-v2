@@ -19,19 +19,17 @@ RUN apt-get update && \
     apt install ffmpeg -y && \
     rm -rf /var/lib/apt/lists/*
 
-# Create o11 directory and set permissions
-RUN mkdir -p /home/o11 && \
-    chown 1000:1000 /home/o11
-
-# Switch to the "user" user
-USER 1000
-
+# Configure tmpfs and create directories as root
 RUN sed -i '/home\/o11/d' /etc/fstab && \
     echo "tmpfs /home/o11/hls tmpfs defaults,noatime,nosuid,nodev,noexec,mode=1777,size=70% 0 0" >> /etc/fstab && \
     echo "tmpfs /home/o11/dl tmpfs defaults,noatime,nosuid,nodev,noexec,mode=1777,size=70% 0 0" >> /etc/fstab && \
-    mkdir -p /home/o11/hls && mkdir -p /home/o11/dl && \
+    mkdir -p /home/o11/hls /home/o11/dl && \
     echo "Verifying tmpfs configuration:" && \
-    grep "tmpfs /home/o11/hls" /etc/fstab || (echo "Failed to add tmpfs configuration" && exit 1)
+    grep "tmpfs /home/o11/hls" /etc/fstab || (echo "Failed to add tmpfs configuration" && exit 1) && \
+    chown -R 1000:1000 /home/o11
+
+# Switch to the "user" user
+USER 1000
 
 # Set working directory to original path
 WORKDIR /home/o11
